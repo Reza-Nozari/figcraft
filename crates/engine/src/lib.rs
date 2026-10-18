@@ -687,7 +687,7 @@ impl Default for Prefs {
             theme: "system".into(),
             panel_widths: (240.0, 240.0),
             pages_height: None,
-            language: "system".into(),
+            language: "fa".into(),
             user_name: cmd::comment::DEFAULT_AUTHOR.into(),
             reduce_motion: false,
             auto_save: false,

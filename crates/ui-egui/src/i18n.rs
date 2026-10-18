@@ -56,6 +56,11 @@ pub fn current() -> Option<&'static Lang> {
     LANGS.get(CURRENT.load(Ordering::Relaxed))
 }
 
+/// Whether the UI chrome should mirror (right-to-left): Persian and other RTL catalogs.
+pub fn is_rtl() -> bool {
+    current().is_some_and(|l| matches!(l.code, "fa" | "ar" | "he"))
+}
+
 /// Show the language of `pref` (a language code, or "system" for `system`, the OS or browser
 /// languages, most preferred first and comma-separated). Unknown languages show English.
 pub fn set(pref: &str, system: Option<&str>) {

@@ -278,18 +278,21 @@ fn word_at(text: &str, i: usize) -> (usize, usize) {
 pub fn script_fallbacks(have: &dyn Fn(char) -> bool) -> Vec<(String, egui::FontData)> {
     // Hebrew, Arabic letters, Arabic presentation forms (what joined names are drawn with).
     const SAMPLES: [char; 3] = ['\u{05D0}', '\u{0628}', '\u{FE91}'];
-    const FAMILIES: [&str; 11] = [
-        "Segoe UI",
-        "Arial",
+    const FAMILIES: [&str; 14] = [
+        "Vazirmatn",
         "Tahoma",
-        "Noto Sans Hebrew",
+        "Segoe UI",
         "Noto Sans Arabic",
+        "Arial",
+        "Noto Sans Hebrew",
         "Arial Hebrew",
         "Geeza Pro",
         "Lucida Grande",
         "DejaVu Sans",
         "FreeSans",
         "Noto Sans",
+        "Iranian Sans",
+        "Shabnam",
     ];
     let mut out: Vec<(String, egui::FontData)> = Vec::new();
     let mut taken: Vec<Arc<figcraft_text::Face>> = Vec::new();

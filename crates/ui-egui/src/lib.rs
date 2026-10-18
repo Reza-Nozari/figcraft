@@ -1449,15 +1449,20 @@ impl FigApp {
             return;
         }
         let hidden = self.session.ds().map(|d| d.view.ui_hidden).unwrap_or(false);
+        let rtl = i18n::is_rtl();
+        // Layers rail + layers/assets panel sit on the start side; Design/Prototype/Inspect on the end.
+        // In RTL the start side is the right edge.
         if !hidden {
-            egui::Panel::left("left_rail")
-                .exact_size(56.0)
-                .resizable(false)
-                .frame(egui::Frame::NONE.fill(t.panel).stroke(egui::Stroke::new(1.0, t.border)))
-                .show(ui, |ui| {
-                    a11y::region(&mut self.ui.nav, ui, a11y::Region::Layers, egui::accesskit::Role::Navigation, i18n::tr("Sidebar"));
-                    layers::rail(self, ui)
-                });
+            let rail = |ui: &mut egui::Ui| {
+                a11y::region(&mut self.ui.nav, ui, a11y::Region::Layers, egui::accesskit::Role::Navigation, i18n::tr("Sidebar"));
+                layers::rail(self, ui)
+            };
+            let frame = egui::Frame::NONE.fill(t.panel).stroke(egui::Stroke::new(1.0, t.border));
+            if rtl {
+                egui::Panel::right("left_rail").exact_size(56.0).resizable(false).frame(frame).show(ui, rail);
+            } else {
+                egui::Panel::left("left_rail").exact_size(56.0).resizable(false).frame(frame).show(ui, rail);
+            }
         }
         // The panels are as wide as asked, less in a window too small for them and the canvas.
         let left_open = !hidden && !self.ui.left_collapsed;
@@ -1465,36 +1470,44 @@ impl FigApp {
         let rows = ui.available_rect_before_wrap().y_range();
         let mut edges: Vec<(&str, f32, f32, f32)> = Vec::new();
         if left_open {
-            edges.push(("left", ui.available_rect_before_wrap().min.x + left_w, left_w, 1.0));
-            egui::Panel::left("left_panel")
-                .resizable(false)
-                .exact_size(left_w)
-                .frame(egui::Frame::NONE.fill(t.panel).stroke(egui::Stroke::new(1.0, t.border)))
-                .show(ui, |ui| {
-                    let label = match self.ui.left_tab {
-                        _ if self.ui.versions.open => i18n::tr("Version history"),
-                        LeftTab::File => i18n::tr("Layers"),
-                        LeftTab::Assets => i18n::tr("Assets"),
-                    };
-                    a11y::region(&mut self.ui.nav, ui, a11y::Region::Layers, egui::accesskit::Role::Pane, label);
-                    layers::left_panel(self, ui)
-                });
+            let layers_body = |ui: &mut egui::Ui| {
+                let label = match self.ui.left_tab {
+                    _ if self.ui.versions.open => i18n::tr("Version history"),
+                    LeftTab::File => i18n::tr("Layers"),
+                    LeftTab::Assets => i18n::tr("Assets"),
+                };
+                a11y::region(&mut self.ui.nav, ui, a11y::Region::Layers, egui::accesskit::Role::Pane, label);
+                layers::left_panel(self, ui)
+            };
+            let frame = egui::Frame::NONE.fill(t.panel).stroke(egui::Stroke::new(1.0, t.border));
+            if rtl {
+                // Layers on the right: edge is its left side; drag left (negative) widens.
+                edges.push(("left", ui.available_rect_before_wrap().max.x - left_w, left_w, -1.0));
+                egui::Panel::right("left_panel").resizable(false).exact_size(left_w).frame(frame).show(ui, layers_body);
+            } else {
+                edges.push(("left", ui.available_rect_before_wrap().min.x + left_w, left_w, 1.0));
+                egui::Panel::left("left_panel").resizable(false).exact_size(left_w).frame(frame).show(ui, layers_body);
+            }
         }
         if !hidden {
-            edges.push(("right", ui.available_rect_before_wrap().max.x - right_w, right_w, -1.0));
-            egui::Panel::right("right_panel")
-                .resizable(false)
-                .exact_size(right_w)
-                .frame(egui::Frame::NONE.fill(t.panel).stroke(egui::Stroke::new(1.0, t.border)))
-                .show(ui, |ui| {
-                    let label = match self.ui.right_tab {
-                        RightTab::Design => i18n::tr("Design"),
-                        RightTab::Prototype => i18n::tr("Prototype"),
-                        RightTab::Inspect => i18n::tr("Dev Mode"),
-                    };
-                    a11y::region(&mut self.ui.nav, ui, a11y::Region::Properties, egui::accesskit::Role::Pane, label);
-                    right::right_panel(self, ui)
-                });
+            let props_body = |ui: &mut egui::Ui| {
+                let label = match self.ui.right_tab {
+                    RightTab::Design => i18n::tr("Design"),
+                    RightTab::Prototype => i18n::tr("Prototype"),
+                    RightTab::Inspect => i18n::tr("Dev Mode"),
+                };
+                a11y::region(&mut self.ui.nav, ui, a11y::Region::Properties, egui::accesskit::Role::Pane, label);
+                right::right_panel(self, ui)
+            };
+            let frame = egui::Frame::NONE.fill(t.panel).stroke(egui::Stroke::new(1.0, t.border));
+            if rtl {
+                // Design panel on the left: edge is its right side; drag right (positive) widens.
+                edges.push(("right", ui.available_rect_before_wrap().min.x + right_w, right_w, 1.0));
+                egui::Panel::left("right_panel").resizable(false).exact_size(right_w).frame(frame).show(ui, props_body);
+            } else {
+                edges.push(("right", ui.available_rect_before_wrap().max.x - right_w, right_w, -1.0));
+                egui::Panel::right("right_panel").resizable(false).exact_size(right_w).frame(frame).show(ui, props_body);
+            }
         }
         egui::CentralPanel::default().frame(egui::Frame::NONE.fill(t.canvas)).show(ui, |ui| {
             let worker = self.worker.take();

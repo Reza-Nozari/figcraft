@@ -323,8 +323,12 @@ pub(crate) fn row_rect(ui: &mut Ui, h: f32, add: impl FnOnce(&mut Ui)) -> Rect {
 pub(crate) fn block(ui: &mut Ui, h: f32, inset_y: f32, add: impl FnOnce(&mut Ui)) -> Rect {
     let w = ui.available_width();
     let (r, _) = ui.allocate_exact_size(vec2(w, h), Sense::hover());
-    let mut child =
-        ui.new_child(egui::UiBuilder::new().max_rect(r.shrink2(vec2(PAD, inset_y))).layout(egui::Layout::left_to_right(egui::Align::Center)));
+    let layout = if crate::i18n::is_rtl() {
+        egui::Layout::right_to_left(egui::Align::Center)
+    } else {
+        egui::Layout::left_to_right(egui::Align::Center)
+    };
+    let mut child = ui.new_child(egui::UiBuilder::new().max_rect(r.shrink2(vec2(PAD, inset_y))).layout(layout));
     child.spacing_mut().item_spacing = vec2(8.0, 0.0);
     add(&mut child);
     r
@@ -473,12 +477,22 @@ fn header(app: &mut FigApp, ui: &mut Ui, doc: &Document, sel: &[NodeId]) {
     };
     let w = ui.available_width();
     let (r, _) = ui.allocate_exact_size(vec2(w, 40.0), Sense::hover());
-    let lr = Rect::from_min_size(pos2(r.min.x + 8.0, r.center().y - 12.0), vec2(120.0, 24.0));
+    let rtl = crate::i18n::is_rtl();
+    let lr = if rtl {
+        Rect::from_min_size(pos2(r.max.x - 128.0, r.center().y - 12.0), vec2(120.0, 24.0))
+    } else {
+        Rect::from_min_size(pos2(r.min.x + 8.0, r.center().y - 12.0), vec2(120.0, 24.0))
+    };
     let resp = ui.interact(lr, ui.id().with("typedd"), Sense::click());
     if resp.hovered() {
         ui.painter().rect_filled(lr, CornerRadius::same(5), t.hover);
     }
-    ui.painter().text(pos2(lr.min.x + 8.0, lr.center().y), Align2::LEFT_CENTER, &label, semibold(13.0), t.text);
+    let (label_x, label_align) = if rtl {
+        (lr.max.x - 8.0, Align2::RIGHT_CENTER)
+    } else {
+        (lr.min.x + 8.0, Align2::LEFT_CENTER)
+    };
+    ui.painter().text(pos2(label_x, lr.center().y), label_align, &label, semibold(13.0), t.text);
     if is_frame || is_group {
         icons::paint(
             ui.painter(),
@@ -2132,7 +2146,9 @@ pub(crate) fn inspect_section(app: &mut FigApp, ui: &mut Ui, s: &figcraft_engine
     let t = Tokens::get(ui.ctx());
     widgets::separator(ui);
     let (hr, _) = ui.allocate_exact_size(vec2(ui.available_width(), 32.0), Sense::hover());
-    ui.painter().text(pos2(hr.min.x + PAD, hr.center().y), Align2::LEFT_CENTER, tr(s.title), semibold(11.0), t.text);
+    let title_align = if crate::i18n::is_rtl() { Align2::RIGHT_CENTER } else { Align2::LEFT_CENTER };
+    let title_x = if crate::i18n::is_rtl() { hr.max.x - PAD } else { hr.min.x + PAD };
+    ui.painter().text(pos2(title_x, hr.center().y), title_align, tr(s.title), semibold(11.0), t.text);
     for p in &s.rows {
         prop_row(app, ui, p);
     }
@@ -2151,36 +2167,58 @@ pub(crate) fn prop_row(app: &mut FigApp, ui: &mut Ui, p: &figcraft_engine::devin
     let painter = ui.painter();
     // The engine's property labels ("Width") are keys of their own.
     let label = tr(&p.label);
+    let rtl = crate::i18n::is_rtl();
     // Elided before the value column (some languages' labels run longer).
-    painter.text(
-        pos2(r.min.x + PAD, r.center().y),
-        Align2::LEFT_CENTER,
-        widgets::elide(ui, label, 96.0 - PAD - 6.0),
-        regular(11.0),
-        t.text_secondary,
-    );
-    // The style or variable, right-aligned as a chip.
-    let mut right = r.max.x - PAD;
+    if rtl {
+        painter.text(
+            pos2(r.max.x - PAD, r.center().y),
+            Align2::RIGHT_CENTER,
+            widgets::elide(ui, label, 96.0 - PAD - 6.0),
+            regular(11.0),
+            t.text_secondary,
+        );
+    } else {
+        painter.text(
+            pos2(r.min.x + PAD, r.center().y),
+            Align2::LEFT_CENTER,
+            widgets::elide(ui, label, 96.0 - PAD - 6.0),
+            regular(11.0),
+            t.text_secondary,
+        );
+    }
+    // The style or variable, at the end as a chip (left in RTL, right in LTR).
+    let mut end = if rtl { r.min.x + PAD } else { r.max.x - PAD };
     if let Some(token) = &p.token {
         let galley = painter.layout_no_wrap(token.clone(), regular(10.0), t.text_secondary);
-        let chip =
-            Rect::from_min_max(pos2((right - galley.size().x - 12.0).max(r.min.x + 196.0), r.center().y - 9.0), pos2(right, r.center().y + 9.0));
+        let chip = if rtl {
+            Rect::from_min_max(pos2(end, r.center().y - 9.0), pos2((end + galley.size().x + 12.0).min(r.max.x - 196.0), r.center().y + 9.0))
+        } else {
+            Rect::from_min_max(pos2((end - galley.size().x - 12.0).max(r.min.x + 196.0), r.center().y - 9.0), pos2(end, r.center().y + 9.0))
+        };
         painter.rect_filled(chip, CornerRadius::same(4), t.field);
         painter.with_clip_rect(chip.shrink2(vec2(6.0, 0.0))).galley(
             pos2(chip.min.x + 6.0, chip.center().y - galley.size().y / 2.0),
             galley,
             t.text_secondary,
         );
-        right = chip.min.x - 6.0;
+        end = if rtl { chip.max.x + 6.0 } else { chip.min.x - 6.0 };
     }
-    let mut x = r.min.x + 96.0;
+    let mut x = if rtl { r.max.x - 96.0 } else { r.min.x + 96.0 };
     if let Some(c) = p.color.as_deref().and_then(figcraft_color::Color::from_hex) {
-        let sw = Rect::from_min_size(pos2(x, r.center().y - 6.0), vec2(12.0, 12.0));
+        let sw = if rtl {
+            Rect::from_min_size(pos2(x - 12.0, r.center().y - 6.0), vec2(12.0, 12.0))
+        } else {
+            Rect::from_min_size(pos2(x, r.center().y - 6.0), vec2(12.0, 12.0))
+        };
         widgets::paint_swatch(painter, sw, &Paint::solid(c));
-        x += 18.0;
+        x = if rtl { x - 18.0 } else { x + 18.0 };
     }
-    let value_r = Rect::from_min_max(pos2(x, r.min.y), pos2(right.max(x + 10.0), r.max.y));
-    painter.with_clip_rect(value_r).text(pos2(x, r.center().y), Align2::LEFT_CENTER, &p.value, regular(11.0), t.text);
+    let (value_r, value_align, value_x) = if rtl {
+        (Rect::from_min_max(pos2(end.min(x - 10.0), r.min.y), pos2(x, r.max.y)), Align2::RIGHT_CENTER, x)
+    } else {
+        (Rect::from_min_max(pos2(x, r.min.y), pos2(end.max(x + 10.0), r.max.y)), Align2::LEFT_CENTER, x)
+    };
+    painter.with_clip_rect(value_r).text(pos2(value_x, r.center().y), value_align, &p.value, regular(11.0), t.text);
     if resp.clicked() {
         app.services.clipboard_set_text(&p.value);
         app.toast(trf("Copied {value}", &[("value", &label.to_lowercase())]));
