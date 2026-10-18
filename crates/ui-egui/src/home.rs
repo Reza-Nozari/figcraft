@@ -142,17 +142,35 @@ pub fn show(app: &mut FigApp, ui: &mut Ui) {
     dropped(app, ui.ctx());
     egui::CentralPanel::default().frame(egui::Frame::NONE.fill(t.panel)).show(ui, |ui| {
         let rect = ui.max_rect();
-        let left = Rect::from_min_size(rect.min, vec2(SIDEBAR, rect.height()));
-        ui.painter().line_segment([left.right_top(), left.right_bottom()], Stroke::new(1.0, t.border));
-        sidebar(app, ui, &t, left);
+        let rtl = crate::i18n::is_rtl();
+        let side = if rtl {
+            Rect::from_min_max(pos2(rect.max.x - SIDEBAR, rect.min.y), rect.max)
+        } else {
+            Rect::from_min_size(rect.min, vec2(SIDEBAR, rect.height()))
+        };
+        let edge = if rtl {
+            [side.left_top(), side.left_bottom()]
+        } else {
+            [side.right_top(), side.right_bottom()]
+        };
+        ui.painter().line_segment(edge, Stroke::new(1.0, t.border));
+        sidebar(app, ui, &t, side);
         if app.ui.home_view.file_query.trim().is_empty() && app.ui.home_view.section == Section::Online {
             // Your online files lay themselves out in the area (and scroll their own list).
-            let area = Rect::from_min_max(pos2(left.max.x + 40.0, rect.min.y + 24.0), rect.max - vec2(40.0, 24.0));
+            let area = if rtl {
+                Rect::from_min_max(rect.min + vec2(40.0, 24.0), pos2(side.min.x - 40.0, rect.max.y - 24.0))
+            } else {
+                Rect::from_min_max(pos2(side.max.x + 40.0, rect.min.y + 24.0), rect.max - vec2(40.0, 24.0))
+            };
             crate::online::section(app, ui, area, &t);
             opened_join(app);
             return;
         }
-        let main = Rect::from_min_max(pos2(left.max.x, rect.min.y), rect.max);
+        let main = if rtl {
+            Rect::from_min_max(rect.min, pos2(side.min.x, rect.max.y))
+        } else {
+            Rect::from_min_max(pos2(side.max.x, rect.min.y), rect.max)
+        };
         ui.scope_builder(egui::UiBuilder::new().max_rect(main), |ui| {
             egui::ScrollArea::vertical().id_salt("home").auto_shrink([false, false]).show(ui, |ui| {
                 egui::Frame::NONE.inner_margin(egui::Margin::symmetric(40, 24)).show(ui, |ui| {
@@ -201,9 +219,15 @@ fn dropped(app: &mut FigApp, ctx: &egui::Context) {
 }
 
 fn sidebar(app: &mut FigApp, ui: &mut Ui, t: &Tokens, left: Rect) {
+    let rtl = crate::i18n::is_rtl();
     let mut y = left.min.y + 20.0;
-    icons::paint(ui.painter(), Rect::from_min_size(pos2(left.min.x + 16.0, y), vec2(20.0, 20.0)), Icon::Logo, ACCENT);
-    ui.painter().text(pos2(left.min.x + 44.0, y + 10.0), Align2::LEFT_CENTER, "FigCraft", semibold(14.0), t.text);
+    let (logo_x, title_x, title_align) = if rtl {
+        (left.max.x - 36.0, left.max.x - 44.0, Align2::RIGHT_CENTER)
+    } else {
+        (left.min.x + 16.0, left.min.x + 44.0, Align2::LEFT_CENTER)
+    };
+    icons::paint(ui.painter(), Rect::from_min_size(pos2(logo_x, y), vec2(20.0, 20.0)), Icon::Logo, ACCENT);
+    ui.painter().text(pos2(title_x, y + 10.0), title_align, "FigCraft", semibold(14.0), t.text);
     y += 48.0;
     let search = Rect::from_min_size(pos2(left.min.x + 8.0, y), vec2(SIDEBAR - 16.0, widgets::FIELD_H));
     ui.scope_builder(egui::UiBuilder::new().max_rect(search), |ui| {
@@ -224,8 +248,13 @@ fn sidebar(app: &mut FigApp, ui: &mut Ui, t: &Tokens, left: Rect) {
             ui.painter().rect_filled(r, CornerRadius::same(5), if current { t.selected_row } else { t.hover });
         }
         focus_ring(ui, t, r, &resp, 5);
-        icons::paint(ui.painter(), Rect::from_min_size(pos2(r.min.x + 10.0, r.center().y - 8.0), vec2(16.0, 16.0)), icon, t.icon);
-        ui.painter().text(pos2(r.min.x + 36.0, r.center().y), Align2::LEFT_CENTER, tr(label), regular(12.0), t.text);
+        let (icon_x, text_x, text_align) = if rtl {
+            (r.max.x - 26.0, r.max.x - 36.0, Align2::RIGHT_CENTER)
+        } else {
+            (r.min.x + 10.0, r.min.x + 36.0, Align2::LEFT_CENTER)
+        };
+        icons::paint(ui.painter(), Rect::from_min_size(pos2(icon_x, r.center().y - 8.0), vec2(16.0, 16.0)), icon, t.icon);
+        ui.painter().text(pos2(text_x, r.center().y), text_align, tr(label), regular(12.0), t.text);
         if resp.clicked() {
             app.ui.home_view.section = section;
             app.ui.home_view.file_query.clear();
@@ -323,11 +352,21 @@ fn action_card(ui: &mut Ui, t: &Tokens, icon: Icon, title: &str, sub: &str) -> b
         resp = resp.on_hover_text(format!("{title}\n{sub}"));
     }
     card_frame(ui, t, r, &resp);
-    let ir = Rect::from_min_size(pos2(r.min.x + 16.0, r.center().y - 16.0), vec2(32.0, 32.0));
+    let rtl = crate::i18n::is_rtl();
+    let ir = if rtl {
+        Rect::from_min_size(pos2(r.max.x - 48.0, r.center().y - 16.0), vec2(32.0, 32.0))
+    } else {
+        Rect::from_min_size(pos2(r.min.x + 16.0, r.center().y - 16.0), vec2(32.0, 32.0))
+    };
     ui.painter().rect_filled(ir, CornerRadius::same(6), ACCENT);
     icons::paint(ui.painter(), ir.shrink(8.0), icon, Color32::WHITE);
-    ui.painter().text(pos2(r.min.x + 60.0, r.center().y - 8.0), Align2::LEFT_CENTER, title_shown, semibold(12.0), t.text);
-    ui.painter().text(pos2(r.min.x + 60.0, r.center().y + 9.0), Align2::LEFT_CENTER, sub_shown, regular(11.0), t.text_secondary);
+    let (tx, align) = if rtl {
+        (r.max.x - 60.0, Align2::RIGHT_CENTER)
+    } else {
+        (r.min.x + 60.0, Align2::LEFT_CENTER)
+    };
+    ui.painter().text(pos2(tx, r.center().y - 8.0), align, title_shown, semibold(12.0), t.text);
+    ui.painter().text(pos2(tx, r.center().y + 9.0), align, sub_shown, regular(11.0), t.text_secondary);
     resp.clicked()
 }
 

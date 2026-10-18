@@ -1,4 +1,4 @@
-> **فارسی:** این مخزن برای توسعه‌دهنده‌های فارسی‌زبان است. راهنما در [README.fa.md](README.fa.md) است و کار راست‌به‌چپ روی شاخهٔ [`persian`](https://github.com/Reza-Nozari/figcraft/tree/persian) قرار دارد. فهرست بقیهٔ اپ‌ها: [artcraft-farsi](https://github.com/Reza-Nozari/artcraft-farsi).
+> **نسخهٔ فارسی.** این مخزن FigCraft را راست‌به‌چپ و به فارسی نشان می‌دهد. راهنما: [README.fa.md](README.fa.md). نصب ویندوز: [آخرین نسخه](https://github.com/Reza-Nozari/figcraft/releases/latest). فهرست بقیهٔ اپ‌ها: [artcraft-farsi](https://github.com/Reza-Nozari/artcraft-farsi).
 
 <p align="center">
   <a href="https://getartcraft.com/">
@@ -35,6 +35,11 @@
 </p>
 
 <br>
+
+<p align="center">
+  <img src="docs/images/shot-persian.png" alt="نسخهٔ فارسی FigCraft: بوم داشبورد Ridgeline با نمودار درآمد، پنل لایه‌ها در راست و پنل طراحی در چپ" width="100%">
+  <br><sub><b>نسخهٔ فارسی.</b> This is the Persian version: the canvas, layers and design panels run right to left.</sub>
+</p>
 
 <p align="center">
   <img src="docs/images/shot-1-hero.png" alt="FigCraft in its dark theme editing the Ridgeline hiking app: three phone screens (Home in light mode, a trail detail page and Home in dark mode) on the canvas, the Featured trail card instance selected, the layers panel showing the screen's auto layout tree, and the Design panel showing the instance's Fill and Hug auto layout sizing, its Theme variable mode and a fill bound to the surface colour variable" width="100%">
