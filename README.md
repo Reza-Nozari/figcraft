@@ -1,3 +1,5 @@
+> **فارسی:** این مخزن برای توسعه‌دهنده‌های فارسی‌زبان است. راهنما در [README.fa.md](README.fa.md) است و کار راست‌به‌چپ روی شاخهٔ [`persian`](https://github.com/Reza-Nozari/figcraft/tree/persian) قرار دارد. فهرست بقیهٔ اپ‌ها: [artcraft-farsi](https://github.com/Reza-Nozari/artcraft-farsi).
+
 <p align="center">
   <a href="https://getartcraft.com/">
     <picture>
